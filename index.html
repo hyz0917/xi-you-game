@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>西游记 · 闯关</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;padding:14px;min-height:100vh;display:flex;justify-content:center;
+    background:#0d0806;
+    background-image:
+      radial-gradient(circle at 20% 8%, rgba(255,180,60,.14), transparent 45%),
+      radial-gradient(circle at 85% 85%, rgba(255,90,40,.12), transparent 50%),
+      radial-gradient(circle at 50% 45%, #241408 0%, #0d0806 72%);
+    color:#f0dfc0;
+    font-family:"STKaiti","KaiTi","Songti SC","Noto Serif SC",serif;
+    user-select:none;touch-action:manipulation;overflow-x:hidden;
+  }
+  .app{width:100%;max-width:560px;}
+
+  /* 顶栏 */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:14px;padding:0 4px;font-size:14px;letter-spacing:1px;
+  }
+  .brand{color:#f2c877;font-weight:700;text-shadow:0 0 16px rgba(255,180,60,.45);}
+  .dots{display:flex;gap:7px;}
+  .dot{
+    width:9px;height:9px;border-radius:50%;
+    background:rgba(255,220,160,.16);
+    border:1px solid rgba(226,178,90,.35);transition:.3s;
+  }
+  .dot.done{background:#7dffa8;border-color:#7dffa8;box-shadow:0 0 10px #7dffa8;}
+  .dot.cur{background:#ffc85a;border-color:#ffc85a;box-shadow:0 0 12px #ffc85a;transform:scale(1.35);}
+  .score{color:#f2c877;font-variant-numeric:tabular-nums;}
+
+  /* 卡片 */
+  .card{
+    position:relative;overflow:hidden;
+    background:linear-gradient(180deg, rgba(62,40,21,.92), rgba(28,17,10,.96));
+    border:1px solid rgba(226,178,90,.42);
+    border-radius:18px;padding:20px 18px 24px;
+    box-shadow:0 14px 44px rgba(0,0,0,.65), inset 0 0 60px rgba(255,160,60,.055);
+    animation:pop .35s ease;
+  }
+  @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.98);}to{opacity:1;transform:none;}}
+  .card::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(circle at 50% -20%, rgba(255,200,90,.16), transparent 60%);
+  }
+  .tag{
+    display:inline-block;font-size:12px;letter-spacing:3px;color:#c99a44;
+    border:1px solid rgba(226,178,90,.35);border-radius:20px;
+    padding:3px 12px;margin-bottom:10px;
+  }
+  h2{margin:0 0 10px;font-size:26px;letter-spacing:4px;color:#ffd98a;
+     text-shadow:0 0 22px rgba(255,180,60,.45);}
+  .hint{margin:0 0 6px;font-size:14px;line-height:1.7;color:#c8b190;letter-spacing:.5px;}
+  .list{list-style:none;padding:0;margin:14px 0 4px;font-size:14px;color:#c8b190;line-height:2;}
+  .list li{border-bottom:1px dashed rgba(226,178,90,.16);padding-left:4px;}
+
+  .center{display:flex;justify-content:center;margin-top:16px;}
+
+  /* 按钮 */
+  .btn{
+    border:none;cursor:pointer;font-family:inherit;font-weight:700;
+    font-size:18px;letter-spacing:4px;color:#3a1f05;
+    padding:13px 34px;border-radius:13px;
+    background:linear-gradient(180deg,#ffd97a,#d98b1e);
+    box-shadow:0 6px 0 #8a4f08, 0 10px 26px rgba(255,150,40,.28);
+    transition:transform .07s, box-shadow .07s;
+  }
+  .btn:active{transform:translateY(4px);box-shadow:0 2px 0 #8a4f08,0 4px 12px rgba(255,150,40,.2);}
+
+  /* 计时轨道 */
+  .track{
+    position:relative;height:32px;border-radius:16px;margin:22px 2px;
+    background:rgba(0,0,0,.5);overflow:hidden;
+    border:1px solid rgba(226,178,90,.3);
+    box-shadow:inset 0 3px 10px rgba(0,0,0,.6);
+  }
+  .target{
+    position:absolute;top:0;bottom:0;border-radius:5px;
+    background:linear-gradient(180deg,rgba(255,215,110,.5),rgba(255,150,40,.5));
+    box-shadow:0 0 20px rgba(255,190,70,.65),inset 0 0 12px rgba(255,230,150,.5);
+  }
+  .marker{
+    position:absolute;top:0;bottom:0;width:6px;left:0;
+    transform:translateX(-50%);border-radius:3px;background:#fff;
+    box-shadow:0 0 12px #fff,0 0 26px #ffb43c;
+    transition:background .12s, box-shadow .12s;
+  }
+  .marker.good{background:#7dffa8;box-shadow:0 0 14px #7dffa8,0 0 30px #2fff7a;}
+  .marker.bad{background:#ff6b6b;box-shadow:0 0 14px #ff6b6b;}
+
+  /* 网格 */
+  .grid{display:grid;gap:10px;margin-top:8px;}
+  .g3{grid-template-columns:repeat(3,1fr);}
+  .g4{grid-template-columns:repeat(4,1fr);}
+  .tile{
+    aspect-ratio:1/1;border-radius:13px;display:flex;align-items:center;justify-content:center;
+    font-size:clamp(22px,7vw,32px);cursor:pointer;
+    background:rgba(255,220,150,.07);
+    border:1px solid rgba(226,178,90,.28);
+    transition:transform .15s, background .15s, box-shadow .15s;
+  }
+  .tile:active{transform:scale(.95);}
+  .tile.lit{background:rgba(255,195,85,.6);box-shadow:0 0 24px rgba(255,195,85,.85);transform:scale(1.07);}
+  .tile.active{background:rgba(255,90,90,.45);box-shadow:0 0 26px rgba(255,90,90,.8);transform:scale(1.07);}
+  .tile.matched{background:rgba(125,255,168,.13);border-color:rgba(125,255,168,.55);cursor:default;}
+
+  /* 火焰条 */
+  .bar{
+    height:22px;border-radius:11px;overflow:hidden;margin:16px 0 6px;
+    background:rgba(0,0,0,.55);border:1px solid rgba(226,178,90,.3);
+    box-shadow:inset 0 3px 10px rgba(0,0,0,.6);
+  }
+  .bar-fill{
+    height:100%;width:100%;border-radius:11px;
+    background:linear-gradient(90deg,#ff3b1f,#ff8a00,#ffd23f);
+    box-shadow:0 0 22px rgba(255,120,0,.8);
+    transition:width .08s linear;
+  }
+
+  .counter{margin-top:14px;text-align:center;font-size:15px;color:#c8b190;letter-spacing:1px;}
+  .counter b{color:#ffd98a;font-size:18px;}
+  .tip{margin-top:8px;text-align:center;font-size:14px;color:#e0b76a;letter-spacing:1px;min-height:22px;}
+
+  .big-score{
+    text-align:center;font-size:52px;color:#ffd98a;margin:18px 0 4px;
+    text-shadow:0 0 34px rgba(255,180,60,.65);font-weight:700;letter-spacing:2px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">🐒 西游记 · 闯关</div>
+    <div class="dots" id="dots"></div>
+    <div class="score" id="score">0 分</div>
+  </div>
+  <main id="stage"></main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const stage   = document.getElementById('stage');
+  const dotsEl  = document.getElementById('dots');
+  const scoreEl = document.getElementById('score');
+
+  let score = 0;
+  let current = -1;
+  let cleanups = [];
+
+  /* ---------- 工具 ---------- */
+  function delay(fn, ms){
+    const id = setTimeout(fn, ms);
+    cleanups.push(()=>clearTimeout(id));
+    return id;
+  }
+  function addScore(n){
+    score += n;
+    scoreEl.textContent = score + ' 分';
+  }
+  function shuffle(a){
+    a = a.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+
+  /* ---------- 关卡定义 ---------- */
+  const LEVELS = [
+    {tag:'第一关', name:'石猴出世',   hint:'在金色区域内点击「挥棒」，连中 3 次敲开仙石。',      render:L1},
+    {tag:'第二关', name:'龙宫取宝',   hint:'翻开卡片，找出全部 4 件龙宫宝物。',                  render:L2},
+    {tag:'第三关', name:'三打白骨精', hint:'白骨精会不断现身，看准了再打，打中 3 次。',           render:L3},
+    {tag:'第四关', name:'火焰山',     hint:'狂点「扇风」，把火焰压到 0 就能翻过火焰山。',          render:L4},
+    {tag:'第五关', name:'大闹天宫',   hint:'记住天兵亮起的顺序，照原样点一遍，共 3 轮。',         render:L5}
+  ];
+
+  /* ---------- 流程控制 ---------- */
+  function updateDots(){
+    dotsEl.innerHTML = LEVELS.map((_,i)=>{
+      let cls = 'dot';
+      if(i < current) cls += ' done';
+      if(i === current) cls += ' cur';
+      return '<span class="'+cls+'"></span>';
+    }).join('');
+  }
+
+  function goLevel(i){
+    cleanups.forEach(f=>{ try{ f(); }catch(e){} });
+    cleanups = [];
+
+    if(i >= LEVELS.length){ win(); return; }
+    current = i;
+    updateDots();
+
+    const L = LEVELS[i];
+    stage.innerHTML =
+      '<section class="card">'+
+        '<div class="tag">'+L.tag+'</div>'+
+        '<h2>'+L.name+'</h2>'+
+        '<p class="hint">'+L.hint+'</p>'+
+        '<div class="play"></div>'+
+      '</section>';
+    L.render(stage.querySelector('.play'));
+  }
+
+  function startScreen(){
+    cleanups.forEach(f=>{ try{ f(); }catch(e){} });
+    cleanups = [];
+    current = -1;
+    updateDots();
+    stage.innerHTML =
+      '<section class="card">'+
+        '<div class="tag">齐天大圣</div>'+
+        '<h2>西 游 记 · 闯 关</h2>'+
+        '<p class="hint">五关考验，你能护送唐僧到达西天吗？</p>'+
+        '<ul class="list">'+
+          '<li>① 石猴出世 — 把握时机</li>'+
+          '<li>② 龙宫取宝 — 记忆配对</li>'+
+          '<li>③ 三打白骨精 — 眼疾手快</li>'+
+          '<li>④ 火焰山 — 疯狂扇风</li>'+
+          '<li>⑤ 大闹天宫 — 记住顺序</li>'+
+        '</ul>'+
+        '<div class="center"><button class="btn" id="startBtn">开 始 取 经</button></div>'+
+      '</section>';
+    document.getElementById('startBtn').addEventListener('click', ()=>goLevel(0));
+  }
+
+  function win(){
+    cleanups.forEach(f=>{ try{ f(); }catch(e){} });
+    cleanups = [];
+    current = LEVELS.length;
+    updateDots();
+    stage.innerHTML =
+      '<section class="card">'+
+        '<div class="tag">通关</div>'+
+        '<h2>取 经 功 成</h2>'+
+        '<p class="hint">你护送唐僧历经五关，功德圆满，修成正果。</p>'+
+        '<div class="big-score">'+score+' 分</div>'+
+        '<div class="center"><button class="btn" id="againBtn">再 战 一 次</button></div>'+
+      '</section>';
+    document.getElementById('againBtn').addEventListener('click', ()=>{
+      score = 0;
+      scoreEl.textContent = '0 分';
+      startScreen();
+    });
+  }
+
+  /* =====================================================
+     第一关：石猴出世 —— 时机判定
+     ===================================================== */
+  function L1(box){
+    box.innerHTML =
+      '<div class="track"><div class="target"></div><div class="marker"></div></div>'+
+      '<div class="center"><button class="btn" id="hitBtn">挥 棒</button></div>'+
+      '<div class="counter">命中 <b id="cnt">0</b> / 3</div>'+
+      '<div class="tip" id="tip">瞄准金色区域！</div>';
+
+    const marker = box.querySelector('.marker');
+    const target = box.querySelector('.target');
+    const cnt    = box.querySelector('#cnt');
+    const tip    = box.querySelector('#tip');
+    const btn    = box.querySelector('#hitBtn');
+
+    const TW = 22, START = 50 - TW/2, END = 50 + TW/2;
+    target.style.left  = START + '%';
+    target.style.width = TW + '%';
+
+    let pos = 0, dir = 1, speed = 1.6, hits = 0, running = true, raf = 0;
+
+    function frame(){
+      if(!running) return;
+      pos += dir * speed;
+      if(pos >= 100){ pos = 100; dir = -1; }
+      if(pos <= 0){ pos = 0; dir = 1; }
+      marker.style.left = pos + '%';
+      raf = requestAnimationFrame(frame);
+    }
+    raf = requestAnimationFrame(frame);
+    cleanups.push(()=>{ running = false; cancelAnimationFrame(raf); });
+
+    btn.addEventListener('click', ()=>{
+      if(!running) return;
+      if(pos >= START && pos <= END){
+        hits++;
+        cnt.textContent = hits;
+        speed += 0.5;
+        tip.textContent = ['咚！石头裂开一道缝…','咔嚓！裂缝越来越大了…','轰隆——仙石迸裂！'][Math.min(hits-1,2)];
+        marker.classList.add('good');
+        delay(()=>marker.classList.remove('good'), 180);
+        if(hits >= 3){
+          running = false;
+          addScore(100);
+          delay(()=>goLevel(1), 900);
+        }
+      } else {
+        speed = Math.min(speed + 0.12, 4.2);
+        tip.textContent = '偏了！再来一次';
+        marker.classList.add('bad');
+        delay(()=>marker.classList.remove('bad'), 180);
+      }
+    });
+  }
+
+  /* =====================================================
+     第二关：龙宫取宝 —— 记忆配对
+     ===================================================== */
+  function L2(box){
+    const icons = ['🔱','🐚','🦐','💎'];
+    const deck  = shuffle(icons.concat(icons));
+
+    box.innerHTML =
+      '<div class="grid g4" id="grid"></div>'+
+      '<div class="counter">已找到 <b id="cnt">0</b> / 4</div>'+
+      '<div class="tip" id="tip">点击卡片翻开看看</div>';
+
+    const grid = box.querySelector('#grid');
+    const cnt  = box.querySelector('#cnt');
+    const tip  = box.querySelector('#tip');
+
+    let first = null, lock = false, found = 0;
+
+    deck.forEach(icon=>{
+      const el = document.createElement('div');
+      el.className = 'tile';
+      el.textContent = '🌊';
+      el.dataset.icon = icon;
+      el.addEventListener('click', ()=>{
+        if(lock || el.classList.contains('matched') || el === first) return;
+
+        el.textContent = icon;
+        el.classList.add('lit');
+
+        if(!first){ first = el; return; }
+
+        if(first.dataset.icon === el.dataset.icon){
+          first.classList.add('matched');
+          el.classList.add('matched');
+          first.classList.remove('lit');
+          el.classList.remove('lit');
+          first = null;
+          found++;
+          cnt.textContent = found;
+          if(found === 4){
+            addScore(100);
+            tip.textContent = '如意金箍棒到手！';
+            delay(()=>goLevel(2), 800);
+          }
+        } else {
+          lock = true;
+          const a = first, b = el;
+          first = null;
+          delay(()=>{
+            a.textContent = '🌊'; a.classList.remove('lit');
+            b.textContent = '🌊'; b.classList.remove('lit');
+            lock = false;
+          }, 680);
+        }
+      });
+      grid.appendChild(el);
+    });
+  }
+
+  /* =====================================================
+     第三关：三打白骨精 —— 打地鼠
+     ===================================================== */
+  function L3(box){
+    box.innerHTML =
+      '<div class="grid g3" id="grid"></div>'+
+      '<div class="counter">已打中 <b id="cnt">0</b> / 3</div>'+
+      '<div class="tip" id="tip">白骨精现身！快打！</div>';
+
+    const grid = box.querySelector('#grid');
+    const cnt  = box.querySelector('#cnt');
+    const tip  = box.querySelector('#tip');
+
+    const cells = [];
+    for(let i=0;i<9;i++){
+      const c = document.createElement('div');
+      c.className = 'tile';
+      grid.appendChild(c);
+      cells.push(c);
+    }
+
+    const times = [900, 750, 600];
+    let hits = 0, running = true, activeCell = null, activeTimer = null, lastIdx = -1;
+
+    function hide(){
+      if(activeCell){
+        activeCell.classList.remove('active');
+        activeCell.textContent = '';
+        activeCell = null;
+      }
+    }
+
+    function spawn(){
+      if(!running) return;
+      hide();
+      let idx;
+      do { idx = Math.floor(Math.random()*9); } while(idx === lastIdx);
+      lastIdx = idx;
+      activeCell = cells[idx];
+      activeCell.textContent = '💀';
+      activeCell.classList.add('active');
+      activeTimer = delay(()=>{
+        if(!running) return;
+        hide();
+        activeTimer = delay(spawn, 340);
+      }, times[Math.min(hits, times.length-1)]);
+    }
+
+    cells.forEach(c=>{
+      c.addEventListener('click', ()=>{
+        if(!running || c !== activeCell) return;
+        clearTimeout(activeTimer);
+        hide();
+        hits++;
+        cnt.textContent = hits;
+        if(hits >= 3){
+          running = false;
+          addScore(100);
+          tip.textContent = '白骨精现出原形！';
+          delay(()=>goLevel(3), 800);
+        } else {
+          activeTimer = delay(spawn, 280);
+        }
+      });
+    });
+
+    cleanups.push(()=>{ running = false; });
+    activeTimer = delay(spawn, 500);
+  }
+
+  /* =====================================================
+     第四关：火焰山 —— 疯狂扇风
+     ===================================================== */
+  function L4(box){
+    box.innerHTML =
+      '<div class="bar"><div class="bar-fill" id="fill"></div></div>'+
+      '<div style="text-align:center;font-size:46px;line-height:1;margin:6px 0 2px;" id="flameIcon">🔥</div>'+
+      '<div class="center"><button class="btn" id="fanBtn">扇 风</button></div>'+
+      '<div class="counter">火焰 <b id="cnt">100</b>%</div>'+
+      '<div class="tip" id="tip">连续点击，把火焰压到 0！</div>';
+
+    const fill = box.querySelector('#fill');
+    const cnt  = box.querySelector('#cnt');
+    const btn  = box.querySelector('#fanBtn');
+    const icon = box.querySelector('#flameIcon');
+    const tip  = box.querySelector('#tip');
+
+    let fire = 100, running = true, raf = 0;
+
+    function render(){
+      fill.style.width = fire + '%';
+      cnt.textContent = Math.round(fire);
+      icon.style.transform = 'scale(' + (0.62 + fire/150) + ')';
+      icon.style.opacity = 0.3 + fire/150;
+    }
+
+    function loop(){
+      if(!running) return;
+      fire = Math.min(100, fire + 0.09);
+      render();
+      raf = requestAnimationFrame(loop);
+    }
+
+    render();
+    raf = requestAnimationFrame(loop);
+    cleanups.push(()=>{ running = false; cancelAnimationFrame(raf); });
+
+    btn.addEventListener('click', ()=>{
+      if(!running) return;
+      fire -= 8;
+      if(fire <= 0){
+        fire = 0;
+        render();
+        running = false;
+        addScore(100);
+        tip.textContent = '火焰熄灭，成功翻越火焰山！';
+        delay(()=>goLevel(4), 900);
+        return;
+      }
+      render();
+    });
+  }
+
+  /* =====================================================
+     第五关：大闹天宫 —— 顺序记忆
+     ===================================================== */
+  function L5(box){
+    const symbols = ['🔥','💧','🌿','⚡','🌙','⭐'];
+
+    box.innerHTML =
+      '<div class="grid g3" id="grid"></div>'+
+      '<div class="counter">第 <b id="rd">1</b> / 3 轮</div>'+
+      '<div class="tip" id="tip">看好顺序…</div>';
+
+    const grid = box.querySelector('#grid');
+    const rdEl = box.querySelector('#rd');
+    const tip  = box.querySelector('#tip');
+
+    const cells = symbols.map(s=>{
+      const c = document.createElement('div');
+      c.className = 'tile';
+      c.textContent = s;
+      grid.appendChild(c);
+      return c;
+    });
+
+    const TOTAL = 3;
+    let round = 0, seq = [], inputIdx = 0, accepting = false;
+    let roundTimers = [];
+
+    function later(fn, ms){
+      const id = setTimeout(fn, ms);
+      roundTimers.push(id);
+      return id;
+    }
+    function clearRound(){
+      roundTimers.forEach(clearTimeout);
+      roundTimers = [];
+    }
+    cleanups.push(()=>{ clearRound(); accepting = false; });
+
+    function newRound(){
+      clearRound();
+      accepting = false;
+      inputIdx = 0;
+      const len = 3 + round;
+      seq = [];
+      for(let i=0;i<len;i++) seq.push(Math.floor(Math.random()*6));
+      rdEl.textContent = round + 1;
+      tip.textContent = '看好顺序…';
+      playSequence();
+    }
+
+    function playSequence(){
+      let i = 0;
+      function step(){
+        if(i >= seq.length){
+          accepting = true;
+          inputIdx = 0;
+          tip.textContent = '轮到你了！';
+          return;
+        }
+        const c = cells[seq[i]];
+        c.classList.add('lit');
+        later(()=>{
+          c.classList.remove('lit');
+          i++;
+          later(step, 200);
+        }, 430);
+      }
+      later(step, 620);
+    }
+
+    cells.forEach((c, idx)=>{
+      c.addEventListener('click', ()=>{
+        if(!accepting) return;
+        c.classList.add('lit');
+        later(()=>c.classList.remove('lit'), 170);
+
+        if(seq[inputIdx] === idx){
+          inputIdx++;
+          if(inputIdx === seq.length){
+            accepting = false;
+            round++;
+            if(round >= TOTAL){
+              addScore(100);
+              tip.textContent = '大闹天宫，齐天大圣威武！';
+              delay(()=>goLevel(5), 900);
+            } else {
+              tip.textContent = '答对了！准备下一轮…';
+              later(newRound, 950);
+            }
+          }
+        } else {
+          accepting = false;
+          tip.textContent = '顺序错了，再看一遍…';
+          later(newRound, 1000);
+        }
+      });
+    });
+
+    newRound();
+  }
+
+  /* ---------- 启动 ---------- */
+  startScreen();
+})();
+</script>
+</body>
+</html>
